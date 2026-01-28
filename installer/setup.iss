@@ -25,7 +25,7 @@ DisableProgramGroupPage=yes
 
 ; Output
 OutputDir=..\build
-OutputBaseFilename=NPKIAgent-Setup
+OutputBaseFilename=fair-npki-agent-windows
 Compression=lzma
 SolidCompression=yes
 

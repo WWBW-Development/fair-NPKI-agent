@@ -32,12 +32,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: macos-installer
-          path: build/NPKIAgent.pkg
+          path: build/fair-npki-agent-macos.pkg
           retention-days: 30
       
       - name: Get installer info
         run: |
-          ls -lh build/NPKIAgent.pkg
+          ls -lh build/fair-npki-agent-macos.pkg
           echo "✅ macOS installer built successfully"
 
   build-windows:
@@ -75,12 +75,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-installer
-          path: build/NPKIAgent-Setup.exe
+          path: build/fair-npki-agent-windows.exe
           retention-days: 30
       
       - name: Get installer info
         run: |
-          Get-ChildItem build\NPKIAgent-Setup.exe | Format-List
+          Get-ChildItem build\fair-npki-agent-windows.exe | Format-List
           Write-Host "✅ Windows installer built successfully"
         shell: powershell
 
@@ -107,8 +107,8 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            ./installers/NPKIAgent.pkg
-            ./installers/NPKIAgent-Setup.exe
+            ./installers/fair-npki-agent-macos.pkg
+            ./installers/fair-npki-agent-windows.exe
           draft: false
           prerelease: false
         env:

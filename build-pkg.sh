@@ -34,24 +34,24 @@ pkgbuild --root pkg_root \
          --identifier com.wwbw.fair-npki-agent \
          --version 1.0.0 \
          --install-location / \
-         build/NPKIAgent.pkg
+         build/fair-npki-agent-macos.pkg
 
-echo "✅ PKG built: build/NPKIAgent.pkg"
+echo "✅ PKG built: build/fair-npki-agent-macos.pkg"
 echo ""
 
 # 4. 정리
 # rm -rf pkg_root
 
 # 5. 결과 출력
-PKG_SIZE=$(du -h build/NPKIAgent.pkg | cut -f1)
+PKG_SIZE=$(du -h build/fair-npki-agent-macos.pkg | cut -f1)
 echo "📦 Package Information:"
-echo "   File: build/NPKIAgent.pkg"
+echo "   File: build/fair-npki-agent-macos.pkg"
 echo "   Size: $PKG_SIZE"
 echo ""
 echo "🎉 Build complete!"
 echo ""
 echo "To test installation:"
-echo "  sudo installer -pkg build/NPKIAgent.pkg -target /"
+echo "  sudo installer -pkg build/fair-npki-agent-macos.pkg -target /"
 echo ""
 echo "To check if running:"
 echo "  launchctl list | grep npki"
