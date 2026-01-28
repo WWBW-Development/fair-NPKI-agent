@@ -1,5 +1,5 @@
 ; NPKI Agent Inno Setup Script
-; Creates a Windows installer (NPKIAgent-Setup.exe)
+; Creates a Windows installer (fair-npki-agent-windows.exe)
 
 #define MyAppName "NPKI Agent"
 #define MyAppVersion "1.0.0"

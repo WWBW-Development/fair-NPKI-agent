@@ -1,6 +1,6 @@
 @echo off
 REM Build NPKI Agent Windows Installer
-REM Creates NPKIAgent-Setup.exe using Inno Setup
+REM Creates fair-npki-agent-windows.exe using Inno Setup
 
 echo Building NPKI Agent Windows Installer...
 echo.
@@ -68,15 +68,15 @@ if %errorlevel% neq 0 (
 echo.
 
 REM Verify installer exists
-if not exist "build\NPKIAgent-Setup.exe" (
-    echo ERROR: Installer not found at build\NPKIAgent-Setup.exe
+if not exist "build\fair-npki-agent-windows.exe" (
+    echo ERROR: Installer not found at build\fair-npki-agent-windows.exe
     pause
     exit /b 1
 )
 
 REM Get installer size
 set INSTALLER_SIZE=0
-for %%A in ("build\NPKIAgent-Setup.exe") do set INSTALLER_SIZE=%%~zA
+for %%A in ("build\fair-npki-agent-windows.exe") do set INSTALLER_SIZE=%%~zA
 for /f "tokens=1,2,3 delims=/" %%a in ('echo %INSTALLER_SIZE%') do (
     set /a INSTALLER_MB=%%a/1048576
 )
@@ -85,11 +85,11 @@ echo ========================================
 echo Build complete!
 echo ========================================
 echo.
-echo Installer: build\NPKIAgent-Setup.exe
+echo Installer: build\fair-npki-agent-windows.exe
 echo Size: %INSTALLER_SIZE% bytes (~%INSTALLER_MB% MB^)
 echo.
 echo To test installation:
-echo   1. Run as Administrator: build\NPKIAgent-Setup.exe
+echo   1. Run as Administrator: build\fair-npki-agent-windows.exe
 echo   2. Follow the installation wizard
 echo   3. Verify: curl http://localhost:62735/npki/health
 echo.
