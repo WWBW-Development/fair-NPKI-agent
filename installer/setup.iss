@@ -93,6 +93,8 @@ end;
 
 // Pre-installation check
 function InitializeSetup: Boolean;
+var
+  ResultCode: Integer;
 begin
   Result := True;
   
