@@ -1,0 +1,45 @@
+#!/bin/bash
+
+# NPKI Agent 설치 후 실행 스크립트
+
+# 실제 사용자 찾기 (여러 방법 시도)
+REAL_USER=$(stat -f "%Su" /dev/console)
+# REAL_USER="${SUDO_USER:-$USER}"
+# if [ "$REAL_USER" = "root" ] || [ -z "$REAL_USER" ]; then
+    
+# fi
+
+USER_HOME=$(eval echo ~${REAL_USER})
+LAUNCH_AGENT_PATH="$USER_HOME/Library/LaunchAgents"
+PLIST_NAME="com.wwbw.fair-npki-agent.plist"
+
+echo "Installing NPKI Agent LaunchAgent for user: $REAL_USER..."
+
+# LaunchAgents 디렉토리 생성
+mkdir -p "$LAUNCH_AGENT_PATH"
+
+# plist 파일 복사
+cp "/tmp/com.wwbw.fair-npki-agent.plist" "$LAUNCH_AGENT_PATH/$PLIST_NAME"
+chown ${REAL_USER}:staff "$LAUNCH_AGENT_PATH/$PLIST_NAME"
+chmod 644 "$LAUNCH_AGENT_PATH/$PLIST_NAME"
+
+# 현재 사용자로 LaunchAgent 로드
+sudo -u ${REAL_USER} launchctl load "$LAUNCH_AGENT_PATH/$PLIST_NAME"
+
+# 서비스 시작
+sudo -u ${REAL_USER} launchctl start com.wwbw.fair-npki-agent
+
+# 시작 확인
+if sudo -u ${REAL_USER} launchctl list | grep -q "com.wwbw.fair-npki-agent"; then
+    echo "✅ NPKI Agent installed and started successfully!"
+    echo "✅ Server is running on http://localhost:62735"
+else
+    echo "⚠️  NPKI Agent installed but failed to start automatically."
+    echo "⚠️  Please run: launchctl start com.wwbw.fair-npki-agent"
+fi
+
+echo ""
+echo "To check status: launchctl list | grep npki"
+echo "To view logs: tail -f /tmp/fair-npki-agent.log"
+
+exit 0
