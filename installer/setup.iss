@@ -137,7 +137,7 @@ begin
     begin
       MsgBox('Service installed but may not be running.' + #13#10 +
              'Please check the service status in Services (services.msc)', 
-             mbWarning, MB_OK);
+             mbInformation, MB_OK);
     end;
   end;
 end;
