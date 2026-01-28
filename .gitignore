@@ -1,0 +1,15 @@
+node_modules/
+dist/
+build/
+pkg_root/
+*.log
+.DS_Store
+.env
+.vscode/
+.idea/
+
+
+# 임시 파일
+tmp/
+temp/
+
