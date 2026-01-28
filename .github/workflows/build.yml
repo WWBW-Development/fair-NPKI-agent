@@ -1,0 +1,116 @@
+name: Build Installers
+
+on:
+  push:
+    branches: [main, master, feat/NPKI]
+  pull_request:
+    branches: [main, master, feat/NPKI]
+  workflow_dispatch: # 수동 실행 가능
+
+jobs:
+  build-macos:
+    name: Build macOS Installer
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build macOS installer
+        run: npm run build:mac
+      
+      - name: Upload macOS installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-installer
+          path: build/NPKIAgent.pkg
+          retention-days: 30
+      
+      - name: Get installer info
+        run: |
+          ls -lh build/NPKIAgent.pkg
+          echo "✅ macOS installer built successfully"
+
+  build-windows:
+    name: Build Windows Installer
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install Chocolatey packages
+        run: |
+          choco install innosetup -y
+          choco install nssm -y
+        shell: powershell
+      
+      - name: Build Windows binary
+        run: npm run build:win
+        shell: bash
+      
+      - name: Build Windows installer
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\setup.iss
+        shell: powershell
+      
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: build/NPKIAgent-Setup.exe
+          retention-days: 30
+      
+      - name: Get installer info
+        run: |
+          Get-ChildItem build\NPKIAgent-Setup.exe | Format-List
+          Write-Host "✅ Windows installer built successfully"
+        shell: powershell
+
+  release:
+    name: Create Release
+    needs: [build-macos, build-windows]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+      - name: Download macOS installer
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-installer
+          path: ./installers
+      
+      - name: Download Windows installer
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+          path: ./installers
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ./installers/NPKIAgent.pkg
+            ./installers/NPKIAgent-Setup.exe
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

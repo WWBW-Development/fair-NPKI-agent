@@ -14,7 +14,8 @@
     "pack:mac": "npm run type-check && pkg . --targets node22-macos-x64 --output build/npki-agent-macos",
     "pack:win": "npm run type-check && pkg . --targets node22-win-x64 --output build/npki-agent-win.exe",
     "pack": "npm run type-check && pkg . --targets node22-macos-x64,node22-win-x64 --out-path build",
-    "build:pkg": "./build-pkg.sh"
+    "build:mac": "./build-pkg.sh",
+    "build:win": "./build-win-binary.sh"
   },
   "engines": {
     "node": ">=22.0.0",
