@@ -35,8 +35,8 @@ PrivilegesRequiredOverridesAllowed=dialog
 
 ; UI
 WizardStyle=modern
-SetupIconFile=..\assets\icon.ico
-UninstallDisplayIcon={app}\{#MyAppExeName}
+; SetupIconFile=..\assets\icon.ico
+; UninstallDisplayIcon={app}\{#MyAppExeName}
 
 ; Architecture
 ArchitecturesAllowed=x64
