@@ -64,8 +64,7 @@ jobs:
         shell: powershell
       
       - name: Build Windows binary
-        run: npm run build:win
-        shell: bash
+        run: npm run pack:win
       
       - name: Build Windows installer
         run: |
