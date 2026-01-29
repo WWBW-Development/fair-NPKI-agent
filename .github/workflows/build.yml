@@ -72,17 +72,17 @@ jobs:
           $nssmUrl = "https://nssm.cc/release/nssm-$nssmVersion.zip"
           $toolsDir = "tools"
           
-          Write-Host "📦 Downloading NSSM $nssmVersion..."
+          Write-Host "Downloading NSSM $nssmVersion..."
           Invoke-WebRequest -Uri $nssmUrl -OutFile "nssm.zip"
           
-          Write-Host "📂 Extracting..."
+          Write-Host "Extracting..."
           Expand-Archive -Path "nssm.zip" -DestinationPath "." -Force
           
-          Write-Host "📋 Copying nssm.exe (64-bit)..."
+          Write-Host "Copying nssm.exe (64-bit)..."
           New-Item -ItemType Directory -Force -Path $toolsDir | Out-Null
           Copy-Item "nssm-$nssmVersion\win64\nssm.exe" "$toolsDir\nssm.exe"
           
-          Write-Host "✅ NSSM downloaded successfully"
+          Write-Host "NSSM downloaded successfully"
           Get-ChildItem "$toolsDir\nssm.exe" | Format-List
         shell: powershell
 
