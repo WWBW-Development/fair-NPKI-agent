@@ -1,3 +1,14 @@
 {
-  "words": ["npki", "pkgbuild", "wwbw", "nssm", "iscc", "isdl"]
+  "words": [
+    "npki",
+    "pkgbuild",
+    "wwbw",
+    "nssm",
+    "iscc",
+    "isdl",
+    "multipart",
+    "openssl",
+    "multer",
+    "azurewebsites"
+  ]
 }

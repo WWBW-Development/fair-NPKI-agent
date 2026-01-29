@@ -64,7 +64,26 @@ jobs:
       - name: Install Chocolatey packages
         run: |
           choco install innosetup -y
-          choco install nssm -y
+        shell: powershell
+
+      - name: Download NSSM for bundling
+        run: |
+          $nssmVersion = "2.24"
+          $nssmUrl = "https://nssm.cc/release/nssm-$nssmVersion.zip"
+          $toolsDir = "tools"
+          
+          Write-Host "📦 Downloading NSSM $nssmVersion..."
+          Invoke-WebRequest -Uri $nssmUrl -OutFile "nssm.zip"
+          
+          Write-Host "📂 Extracting..."
+          Expand-Archive -Path "nssm.zip" -DestinationPath "." -Force
+          
+          Write-Host "📋 Copying nssm.exe (64-bit)..."
+          New-Item -ItemType Directory -Force -Path $toolsDir | Out-Null
+          Copy-Item "nssm-$nssmVersion\win64\nssm.exe" "$toolsDir\nssm.exe"
+          
+          Write-Host "✅ NSSM downloaded successfully"
+          Get-ChildItem "$toolsDir\nssm.exe" | Format-List
         shell: powershell
 
       - name: Build Windows binary

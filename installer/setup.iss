@@ -50,8 +50,8 @@ Name: "korean"; MessagesFile: "compiler:Languages\Korean.isl"
 ; Main executable
 Source: "..\build\npki-agent-win.exe"; DestDir: "{app}"; DestName: "{#MyAppExeName}"; Flags: ignoreversion
 
-; NSSM (Service Manager) - Optional, if bundled
-; Source: "..\tools\nssm.exe"; DestDir: "{app}"; Flags: ignoreversion
+; NSSM (Service Manager) - Bundled with installer
+Source: "..\tools\nssm.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Scripts
 Source: "..\scripts\install.bat"; DestDir: "{app}"; Flags: ignoreversion
@@ -64,55 +64,29 @@ Name: "{group}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"
 
 [Run]
 ; Install and start service after installation
-Filename: "nssm.exe"; Parameters: "install {#MyServiceName} ""{app}\{#MyAppExeName}"""; StatusMsg: "Installing service..."; Flags: runhidden
-Filename: "nssm.exe"; Parameters: "set {#MyServiceName} DisplayName ""NPKI Certificate Agent"""; Flags: runhidden
-Filename: "nssm.exe"; Parameters: "set {#MyServiceName} Description ""NPKI Certificate Auto-Discovery Agent"""; Flags: runhidden
-Filename: "nssm.exe"; Parameters: "set {#MyServiceName} Start SERVICE_AUTO_START"; Flags: runhidden
-Filename: "nssm.exe"; Parameters: "set {#MyServiceName} AppStdout ""{tmp}\fair-npki-agent.log"""; Flags: runhidden
-Filename: "nssm.exe"; Parameters: "set {#MyServiceName} AppStderr ""{tmp}\fair-npki-agent.log"""; Flags: runhidden
-Filename: "nssm.exe"; Parameters: "start {#MyServiceName}"; StatusMsg: "Starting service..."; Flags: runhidden waituntilterminated
+Filename: "{app}\nssm.exe"; Parameters: "install {#MyServiceName} ""{app}\{#MyAppExeName}"""; StatusMsg: "Installing service..."; Flags: runhidden
+Filename: "{app}\nssm.exe"; Parameters: "set {#MyServiceName} DisplayName ""NPKI Certificate Agent"""; Flags: runhidden
+Filename: "{app}\nssm.exe"; Parameters: "set {#MyServiceName} Description ""NPKI Certificate Auto-Discovery Agent"""; Flags: runhidden
+Filename: "{app}\nssm.exe"; Parameters: "set {#MyServiceName} Start SERVICE_AUTO_START"; Flags: runhidden
+Filename: "{app}\nssm.exe"; Parameters: "set {#MyServiceName} AppStdout ""{tmp}\fair-npki-agent.log"""; Flags: runhidden
+Filename: "{app}\nssm.exe"; Parameters: "set {#MyServiceName} AppStderr ""{tmp}\fair-npki-agent.log"""; Flags: runhidden
+Filename: "{app}\nssm.exe"; Parameters: "start {#MyServiceName}"; StatusMsg: "Starting service..."; Flags: runhidden waituntilterminated
 
 [UninstallRun]
 ; Stop and remove service before uninstallation
-Filename: "nssm.exe"; Parameters: "stop {#MyServiceName}"; Flags: runhidden
+Filename: "{app}\nssm.exe"; Parameters: "stop {#MyServiceName}"; Flags: runhidden
 Filename: "{cmd}"; Parameters: "/c timeout /t 2 /nobreak"; Flags: runhidden
-Filename: "nssm.exe"; Parameters: "remove {#MyServiceName} confirm"; Flags: runhidden
+Filename: "{app}\nssm.exe"; Parameters: "remove {#MyServiceName} confirm"; Flags: runhidden
 
 [UninstallDelete]
 ; Clean up log files
 Type: files; Name: "{tmp}\fair-npki-agent.log"
 
 [Code]
-// Check if NSSM is installed
-function IsNSSMInstalled: Boolean;
-var
-  ResultCode: Integer;
-begin
-  Result := Exec('cmd.exe', '/c where nssm', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
-end;
-
-// Pre-installation check
+// Pre-installation check (NSSM is now bundled, no check needed)
 function InitializeSetup: Boolean;
-var
-  ResultCode: Integer;
 begin
   Result := True;
-  
-  if not IsNSSMInstalled then
-  begin
-    if MsgBox('NSSM (Non-Sucking Service Manager) is required but not installed.' + #13#10 + #13#10 +
-              'Would you like to install it now?' + #13#10 + #13#10 +
-              'Visit: https://nssm.cc/download' + #13#10 +
-              'Or use Chocolatey: choco install nssm', 
-              mbConfirmation, MB_YESNO) = IDYES then
-    begin
-      // Open NSSM download page
-      ShellExec('open', 'https://nssm.cc/download', '', '', SW_SHOW, ewNoWait, ResultCode);
-    end;
-    
-    Result := False;
-    MsgBox('Please install NSSM and run this installer again.', mbError, MB_OK);
-  end;
 end;
 
 // Post-installation verification
