@@ -2,39 +2,43 @@ name: Build Installers
 
 on:
   push:
-    branches: [main, master, feat/NPKI]
+    branches: [main, develop, feat/NPKI]
+    tags:
+      - 'v*-dev'
+      - 'v*-prod'
+      - 'v*'
   pull_request:
-    branches: [main, master, feat/NPKI]
+    branches: [main, develop, feat/NPKI]
   workflow_dispatch: # 수동 실행 가능
 
 jobs:
   build-macos:
     name: Build macOS Installer
     runs-on: macos-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
-      
+
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Build macOS installer
         run: npm run build:mac
-      
-      - name: Upload macOS installer
+
+      - name: Upload macOS installer (Artifact)
         uses: actions/upload-artifact@v4
         with:
           name: macos-installer
           path: build/fair-npki-agent-macos.pkg
           retention-days: 30
-      
+
       - name: Get installer info
         run: |
           ls -lh build/fair-npki-agent-macos.pkg
@@ -43,41 +47,41 @@ jobs:
   build-windows:
     name: Build Windows Installer
     runs-on: windows-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
-      
+
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Install Chocolatey packages
         run: |
           choco install innosetup -y
           choco install nssm -y
         shell: powershell
-      
+
       - name: Build Windows binary
         run: npm run pack:win
-      
+
       - name: Build Windows installer
         run: |
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\setup.iss
         shell: powershell
-      
-      - name: Upload Windows installer
+
+      - name: Upload Windows installer (Artifact)
         uses: actions/upload-artifact@v4
         with:
           name: windows-installer
           path: build/fair-npki-agent-windows.exe
           retention-days: 30
-      
+
       - name: Get installer info
         run: |
           Get-ChildItem build\fair-npki-agent-windows.exe | Format-List
@@ -89,27 +93,43 @@ jobs:
     needs: [build-macos, build-windows]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
-    
+
     steps:
+      - name: Set environment and prerelease
+        id: env
+        run: |
+          TAG="${{ github.ref_name }}"
+          if [[ "$TAG" == *"-dev" ]]; then
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+            echo "release_name=Development Release $TAG" >> $GITHUB_OUTPUT
+          elif [[ "$TAG" == *"-prod" ]]; then
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+            echo "release_name=Production Release $TAG" >> $GITHUB_OUTPUT
+          else
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+            echo "release_name=Release $TAG" >> $GITHUB_OUTPUT
+          fi
+
       - name: Download macOS installer
         uses: actions/download-artifact@v4
         with:
           name: macos-installer
           path: ./installers
-      
+
       - name: Download Windows installer
         uses: actions/download-artifact@v4
         with:
           name: windows-installer
           path: ./installers
-      
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
+          name: ${{ steps.env.outputs.release_name }}
           files: |
             ./installers/fair-npki-agent-macos.pkg
             ./installers/fair-npki-agent-windows.exe
           draft: false
-          prerelease: false
+          prerelease: ${{ steps.env.outputs.prerelease }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
