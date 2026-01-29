@@ -74,15 +74,39 @@ jobs:
           Write-Host "Copying NSSM from Chocolatey installation..."
           New-Item -ItemType Directory -Force -Path $toolsDir | Out-Null
           
-          # Find NSSM from Chocolatey installation
-          $nssmPath = Get-ChildItem -Path "C:\ProgramData\chocolatey\lib\nssm\tools" -Filter "nssm.exe" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.DirectoryName -like "*win64*" } | Select-Object -First 1
+          # Wait for Chocolatey installation to complete
+          Start-Sleep -Seconds 2
+          
+          # Try multiple possible locations
+          $possiblePaths = @(
+            "C:\ProgramData\chocolatey\lib\nssm\tools\nssm-*\win64\nssm.exe",
+            "C:\ProgramData\chocolatey\lib\nssm.install\tools\nssm-*\win64\nssm.exe",
+            "C:\ProgramData\chocolatey\bin\nssm.exe"
+          )
+          
+          $nssmPath = $null
+          foreach ($pattern in $possiblePaths) {
+            $found = Get-Item $pattern -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($found) {
+              $nssmPath = $found.FullName
+              break
+            }
+          }
+          
+          # Fallback: use where command
+          if (-not $nssmPath) {
+            $whereResult = where.exe nssm 2>$null
+            if ($LASTEXITCODE -eq 0 -and $whereResult) {
+              $nssmPath = $whereResult | Select-Object -First 1
+            }
+          }
           
           if ($nssmPath) {
-            Copy-Item $nssmPath.FullName "$toolsDir\nssm.exe"
-            Write-Host "NSSM copied successfully from: $($nssmPath.FullName)"
+            Copy-Item $nssmPath "$toolsDir\nssm.exe"
+            Write-Host "NSSM copied successfully from: $nssmPath"
             Get-ChildItem "$toolsDir\nssm.exe" | Format-List
           } else {
-            throw "NSSM not found in Chocolatey installation"
+            throw "NSSM not found in Chocolatey installation or system PATH"
           }
         shell: powershell
 
