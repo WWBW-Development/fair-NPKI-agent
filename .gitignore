@@ -8,9 +8,6 @@ pkg_root/
 .vscode/
 .idea/
 
-# 다운로드된 도구들
-tools/
-
 # 임시 파일
 tmp/
 temp/

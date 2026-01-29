@@ -1,6 +1,6 @@
 @echo off
-REM NPKI Agent Windows Installation Script
-REM This script registers NPKI Agent to start automatically on boot
+REM NPKI Agent Windows Service Installation Script
+REM This script installs NPKI Agent as a Windows Service using NSSM
 
 echo Installing NPKI Agent...
 
@@ -14,65 +14,104 @@ if %errorlevel% neq 0 (
 )
 
 REM Set variables
-set TASK_NAME=NPKIAgent
+set SERVICE_NAME=NPKIAgent
+set SERVICE_DISPLAY_NAME=NPKI Certificate Agent
+set SERVICE_DESCRIPTION=NPKI Certificate Auto-Discovery Agent
 set INSTALL_DIR=%~dp0
-set BINARY_NAME=fair-npki-agent.exe
-set BINARY_PATH=%INSTALL_DIR%%BINARY_NAME%
+set NSSM_PATH=%INSTALL_DIR%nssm.exe
+set BINARY_PATH=%INSTALL_DIR%fair-npki-agent.exe
+set LOG_DIR=%PROGRAMDATA%\fair-npki-agent
+set LOG_FILE=%LOG_DIR%\npki-agent.log
+
+REM Check if NSSM exists
+if not exist "%NSSM_PATH%" (
+    echo ERROR: NSSM not found at %NSSM_PATH%
+    echo Please make sure nssm.exe is in the same directory as this script.
+    pause
+    exit /b 1
+)
 
 REM Check if binary exists
 if not exist "%BINARY_PATH%" (
     echo ERROR: Binary not found at %BINARY_PATH%
-    echo Please make sure %BINARY_NAME% is in the same directory as this script.
+    echo Please make sure fair-npki-agent.exe is in the same directory as this script.
     pause
     exit /b 1
 )
 
-REM Check if task already exists
-schtasks /query /tn %TASK_NAME% >nul 2>&1
+REM Create log directory
+if not exist "%LOG_DIR%" (
+    echo Creating log directory...
+    mkdir "%LOG_DIR%"
+)
+
+REM Check if service already exists
+sc query %SERVICE_NAME% >nul 2>&1
 if %errorlevel% equ 0 (
-    echo Task already exists. Removing existing task...
-    schtasks /delete /tn %TASK_NAME% /f
+    echo Service already exists. Stopping and removing...
+    "%NSSM_PATH%" stop %SERVICE_NAME%
+    timeout /t 2 /nobreak >nul
+    "%NSSM_PATH%" remove %SERVICE_NAME% confirm
 )
 
-REM Stop existing process
-echo Stopping existing process if running...
-taskkill /F /IM %BINARY_NAME% >nul 2>&1
-
-REM Create scheduled task
-echo Creating startup task...
-schtasks /create /tn %TASK_NAME% /tr "\"%BINARY_PATH%\"" /sc onstart /ru SYSTEM /rl highest /f
+REM Install service
+echo Installing Windows Service...
+"%NSSM_PATH%" install %SERVICE_NAME% "%BINARY_PATH%"
 if %errorlevel% neq 0 (
-    echo ERROR: Failed to create startup task.
+    echo ERROR: Failed to install service.
     pause
     exit /b 1
 )
 
-REM Start the application immediately
-echo Starting NPKI Agent...
-start "" "%BINARY_PATH%"
+REM Configure service
+echo Configuring service...
+"%NSSM_PATH%" set %SERVICE_NAME% DisplayName "%SERVICE_DISPLAY_NAME%"
+"%NSSM_PATH%" set %SERVICE_NAME% Description "%SERVICE_DESCRIPTION%"
+"%NSSM_PATH%" set %SERVICE_NAME% Start SERVICE_AUTO_START
+"%NSSM_PATH%" set %SERVICE_NAME% AppStdout "%LOG_FILE%"
+"%NSSM_PATH%" set %SERVICE_NAME% AppStderr "%LOG_FILE%"
+"%NSSM_PATH%" set %SERVICE_NAME% AppRotateFiles 1
+"%NSSM_PATH%" set %SERVICE_NAME% AppRotateBytes 1048576
 
-REM Wait for startup
+REM Start service
+echo Starting service...
+"%NSSM_PATH%" start %SERVICE_NAME%
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to start service.
+    pause
+    exit /b 1
+)
+
+REM Wait and verify
+echo Waiting for service to start...
 timeout /t 3 /nobreak >nul
 
-echo.
-echo ========================================
-echo Installation completed successfully!
-echo ========================================
-echo.
-echo Task Name: %TASK_NAME%
-echo Binary Location: %BINARY_PATH%
-echo.
-echo The application will start automatically on system boot.
-echo Server will be available on http://localhost:62735
-echo.
-echo To verify:
-echo   curl http://localhost:62735/npki/health
-echo.
-echo To check task status:
-echo   schtasks /query /tn %TASK_NAME%
-echo.
-echo To view all tasks:
-echo   Win + R ^> taskschd.msc
-echo.
+REM Check if service is running
+sc query %SERVICE_NAME% | find "RUNNING" >nul
+if %errorlevel% equ 0 (
+    echo.
+    echo ========================================
+    echo Installation completed successfully!
+    echo ========================================
+    echo.
+    echo Service Name: %SERVICE_NAME%
+    echo Binary Location: %BINARY_PATH%
+    echo Log File: %LOG_FILE%
+    echo.
+    echo Server is running on http://localhost:62735
+    echo.
+    echo To verify:
+    echo   curl http://localhost:62735/npki/health
+    echo.
+    echo To check service:
+    echo   Win + R ^> services.msc
+    echo.
+    echo To view logs:
+    echo   type "%LOG_FILE%"
+    echo.
+) else (
+    echo WARNING: Service installed but may not be running.
+    echo Please check the service status in Services (services.msc^)
+)
 
 pause

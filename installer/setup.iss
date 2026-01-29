@@ -50,23 +50,29 @@ Name: "korean"; MessagesFile: "compiler:Languages\Korean.isl"
 ; Main executable
 Source: "..\build\npki-agent-win.exe"; DestDir: "{app}"; DestName: "{#MyAppExeName}"; Flags: ignoreversion
 
+; NSSM (Service Manager) - Included in repository
+Source: "..\tools\nssm.exe"; DestDir: "{app}"; Flags: ignoreversion
+
 [Icons]
 ; No desktop icons for background service
 ; Create uninstall shortcut in start menu
 Name: "{group}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"
 
 [Run]
-; Register startup task using Windows Task Scheduler
-Filename: "schtasks.exe"; Parameters: "/create /tn ""{#MyServiceName}"" /tr ""\""{app}\{#MyAppExeName}\"""" /sc onstart /ru SYSTEM /rl highest /f"; StatusMsg: "Registering startup task..."; Flags: runhidden
-
-; Start the application immediately after installation
-Filename: "{app}\{#MyAppExeName}"; Description: "Start {#MyAppName} now"; Flags: postinstall nowait skipifsilent
+; Install and start Windows Service using NSSM
+Filename: "{app}\nssm.exe"; Parameters: "install {#MyServiceName} ""{app}\{#MyAppExeName}"""; StatusMsg: "Installing Windows Service..."; Flags: runhidden
+Filename: "{app}\nssm.exe"; Parameters: "set {#MyServiceName} DisplayName ""NPKI Certificate Agent"""; Flags: runhidden
+Filename: "{app}\nssm.exe"; Parameters: "set {#MyServiceName} Description ""NPKI Certificate Auto-Discovery Agent"""; Flags: runhidden
+Filename: "{app}\nssm.exe"; Parameters: "set {#MyServiceName} Start SERVICE_AUTO_START"; Flags: runhidden
+Filename: "{app}\nssm.exe"; Parameters: "set {#MyServiceName} AppStdout ""{commonappdata}\fair-npki-agent\npki-agent.log"""; Flags: runhidden
+Filename: "{app}\nssm.exe"; Parameters: "set {#MyServiceName} AppStderr ""{commonappdata}\fair-npki-agent\npki-agent.log"""; Flags: runhidden
+Filename: "{app}\nssm.exe"; Parameters: "start {#MyServiceName}"; StatusMsg: "Starting Windows Service..."; Flags: runhidden waituntilterminated
 
 [UninstallRun]
-; Stop the application
-Filename: "taskkill.exe"; Parameters: "/F /IM {#MyAppExeName}"; Flags: runhidden
-; Remove startup task
-Filename: "schtasks.exe"; Parameters: "/delete /tn ""{#MyServiceName}"" /f"; Flags: runhidden
+; Stop and remove Windows Service
+Filename: "{app}\nssm.exe"; Parameters: "stop {#MyServiceName}"; Flags: runhidden
+Filename: "{cmd}"; Parameters: "/c timeout /t 2 /nobreak"; Flags: runhidden
+Filename: "{app}\nssm.exe"; Parameters: "remove {#MyServiceName} confirm"; Flags: runhidden
 
 [UninstallDelete]
 ; Clean up log files
@@ -80,22 +86,22 @@ var
 begin
   if CurStep = ssPostInstall then
   begin
-    // Wait for application to start
-    Sleep(2000);
+    // Wait for service to start
+    Sleep(3000);
     
-    // Verify task is registered
-    if Exec('cmd.exe', '/c schtasks /query /tn {#MyServiceName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0) then
+    // Verify service is running
+    if Exec('cmd.exe', '/c sc query {#MyServiceName} | find "RUNNING"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0) then
     begin
-      MsgBox('NPKI Agent has been installed successfully!' + #13#10 + #13#10 +
-             'The application will start automatically on system boot.' + #13#10 + #13#10 +
-             'Server will be available on http://localhost:62735' + #13#10 + #13#10 +
+      MsgBox('NPKI Agent has been installed and started successfully!' + #13#10 + #13#10 +
+             'Windows Service is now running.' + #13#10 + #13#10 +
+             'Server is available on http://localhost:62735' + #13#10 + #13#10 +
              'To verify: curl http://localhost:62735/npki/health', 
              mbInformation, MB_OK);
     end
     else
     begin
-      MsgBox('Installation completed but startup task may not be registered.' + #13#10 +
-             'Please check Task Scheduler (taskschd.msc)', 
+      MsgBox('Service installed but may not be running.' + #13#10 +
+             'Please check Services (services.msc)', 
              mbInformation, MB_OK);
     end;
   end;
