@@ -1,6 +1,6 @@
 @echo off
-REM NPKI Agent Windows Service Uninstallation Script
-REM This script removes NPKI Agent Windows Service
+REM NPKI Agent Windows Uninstallation Script
+REM This script removes NPKI Agent startup task
 
 echo Uninstalling NPKI Agent...
 
@@ -14,76 +14,40 @@ if %errorlevel% neq 0 (
 )
 
 REM Set variables
-set SERVICE_NAME=NPKIAgent
-set INSTALL_DIR=%ProgramFiles%\NPKIAgent
-set LOG_FILE=%TEMP%\fair-npki-agent.log
+set TASK_NAME=NPKIAgent
+set BINARY_NAME=fair-npki-agent.exe
 
-REM Check if NSSM is available
-where nssm >nul 2>&1
-if %errorlevel% neq 0 (
-    echo WARNING: NSSM is not installed. Trying to remove service with sc...
-    sc query %SERVICE_NAME% >nul 2>&1
-    if %errorlevel% equ 0 (
-        sc stop %SERVICE_NAME%
-        timeout /t 2 /nobreak >nul
-        sc delete %SERVICE_NAME%
-    )
-    goto cleanup
+REM Stop the application
+echo Stopping NPKI Agent...
+taskkill /F /IM %BINARY_NAME% >nul 2>&1
+if %errorlevel% equ 0 (
+    echo Application stopped successfully.
+) else (
+    echo Application was not running.
 )
 
-REM Check if service exists
-sc query %SERVICE_NAME% >nul 2>&1
-if %errorlevel% neq 0 (
-    echo Service is not installed.
-    goto cleanup
-)
-
-REM Stop service
-echo Stopping service...
-nssm stop %SERVICE_NAME%
+REM Wait for process to terminate
 timeout /t 2 /nobreak >nul
 
-REM Remove service
-echo Removing service...
-nssm remove %SERVICE_NAME% confirm
-if %errorlevel% neq 0 (
-    echo WARNING: Failed to remove service with NSSM. Trying sc...
-    sc delete %SERVICE_NAME%
-)
-
-:cleanup
-REM Remove installation directory
-if exist "%INSTALL_DIR%" (
-    echo Removing installation directory...
-    timeout /t 1 /nobreak >nul
-    rmdir /S /Q "%INSTALL_DIR%" 2>nul
-    if exist "%INSTALL_DIR%" (
-        echo WARNING: Could not remove %INSTALL_DIR%
-        echo Please remove it manually.
-    ) else (
-        echo Installation directory removed.
-    )
-)
-
-REM Remove log file
-if exist "%LOG_FILE%" (
-    echo Removing log file...
-    del /F /Q "%LOG_FILE%" 2>nul
-)
-
-REM Verify removal
-sc query %SERVICE_NAME% >nul 2>&1
-if %errorlevel% neq 0 (
-    echo.
-    echo ========================================
-    echo Uninstallation completed successfully!
-    echo ========================================
-    echo.
+REM Remove scheduled task
+echo Removing startup task...
+schtasks /delete /tn %TASK_NAME% /f >nul 2>&1
+if %errorlevel% equ 0 (
+    echo Startup task removed successfully.
 ) else (
-    echo.
-    echo WARNING: Service may still exist.
-    echo Please check Services (services.msc^) and remove manually.
-    echo.
+    echo Startup task was not found or already removed.
 )
+
+echo.
+echo ========================================
+echo Uninstallation completed!
+echo ========================================
+echo.
+echo The application will no longer start automatically on boot.
+echo.
+echo Note: This script only removes the startup task.
+echo To completely remove the application, delete the installation folder:
+echo   C:\Program Files\NPKIAgent\
+echo.
 
 pause

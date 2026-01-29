@@ -11,7 +11,6 @@
     "type-check": "tsc",
     "start": "npm run type-check && node dist/main.js",
     "dev": "npm run type-check && node dist/main.js",
-    "download:nssm": "./scripts/download-nssm.sh",
     "pack:mac": "npm run type-check && pkg . --targets node22-macos-x64 --output build/npki-agent-macos",
     "pack:win": "npm run type-check && pkg . --targets node22-win-x64 --output build/npki-agent-win.exe",
     "pack": "npm run type-check && pkg . --targets node22-macos-x64,node22-win-x64 --out-path build",

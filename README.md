@@ -76,49 +76,53 @@ tail -f /tmp/fair-npki-agent.log
 
 ### Windows - .exe 인스톨러 (추천)
 
-**가장 쉬운 방법**: 설치 후 자동으로 백그라운드 서비스가 실행되고, 재부팅해도 자동 시작됩니다.
+**가장 쉬운 방법**: 설치 후 자동으로 부팅 시 실행되도록 등록됩니다.
 
 #### 빌드 (GitHub Actions 자동)
 
 GitHub Actions가 자동으로 Windows 인스톨러를 빌드합니다:
-- NSSM이 인스톨러에 포함됨 (별도 설치 불필요)
+- Windows Task Scheduler 사용 (외부 의존성 없음)
 - Inno Setup으로 `.exe` 인스톨러 생성
-- 출력: `build/fair-npki-agent-windows.exe` (~56MB)
+- 출력: `build/fair-npki-agent-windows.exe` (~53MB)
 
 #### 설치
 
 ```powershell
-# 관리자 권한으로 인스톨러 실행
+# 더블클릭으로 설치 (관리자 권한 자동 요청)
 .\fair-npki-agent-windows.exe
 ```
 
 #### 설치 후 자동 실행
 
 - ✅ 설치 즉시 `localhost:62735`에서 서버 시작
-- ✅ Windows 서비스로 자동 등록
+- ✅ Windows Task Scheduler에 부팅 시 자동 실행 등록
 - ✅ 재부팅 후에도 자동으로 시작
-- ✅ 프로세스가 종료되어도 자동으로 재시작
+- ✅ 외부 의존성 없음 (Windows 기본 기능 사용)
 
 #### 상태 확인
 
 ```powershell
-# 서비스 상태 확인
-sc query NPKIAgent
+# Task Scheduler에서 확인
+Win + R → taskschd.msc → "NPKIAgent" 검색
+
+# 또는 명령어로 확인
+schtasks /query /tn NPKIAgent
 
 # 서버 응답 확인
 curl http://localhost:62735/npki/health
 
-# 서비스 관리
-services.msc  # GUI로 서비스 관리
+# 프로세스 확인
+tasklist | findstr fair-npki-agent
 ```
 
 #### 수동 제거
 
 ```powershell
-# 프로그램 추가/제거에서 제거
-# 또는 수동 제거
-cd "C:\Program Files\NPKIAgent"
-.\uninstall.bat
+# 프로그램 추가/제거에서 제거 (추천)
+
+# 또는 명령어로 제거
+schtasks /delete /tn NPKIAgent /f
+taskkill /F /IM fair-npki-agent.exe
 ```
 
 ---
@@ -131,22 +135,17 @@ cd "C:\Program Files\NPKIAgent"
 # 1. 바이너리 빌드 (macOS에서)
 npm run pack:win
 
-# 2. NSSM 다운로드 (Windows에서)
-# https://nssm.cc/download
+# 2. Windows로 파일 전송
 
-# 3. Service 설치 (Windows에서)
+# 3. 관리자 권한 PowerShell에서 실행
 cd scripts
 .\install.bat
 ```
 
-**방법 2: 수동 설치**
+**방법 2: 직접 실행 (자동 시작 없음)**
 ```powershell
-# 1. 바이너리 실행 테스트
+# 그냥 실행 (부팅 시 자동 시작 안 됨)
 .\npki-agent-win.exe
-
-# 2. Service 등록 (선택)
-cd scripts
-.\install.bat
 ```
 
 #### 설치 후 확인
