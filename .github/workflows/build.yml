@@ -64,46 +64,26 @@ jobs:
       - name: Install Chocolatey packages
         run: |
           choco install innosetup -y
+          choco install nssm -y
         shell: powershell
 
-      - name: Download NSSM for bundling
+      - name: Copy NSSM for bundling
         run: |
-          $nssmVersion = "2.24"
-          # GitHub mirror (more reliable than nssm.cc)
-          $nssmUrl = "https://github.com/kirillkovalenko/nssm/releases/download/$nssmVersion/nssm-$nssmVersion.zip"
           $toolsDir = "tools"
           
-          Write-Host "Downloading NSSM $nssmVersion from GitHub..."
-          
-          # Manual retry logic (PowerShell 5.1 compatible)
-          $maxRetries = 3
-          $retryCount = 0
-          $downloaded = $false
-          
-          while (-not $downloaded -and $retryCount -lt $maxRetries) {
-            try {
-              Invoke-WebRequest -Uri $nssmUrl -OutFile "nssm.zip"
-              $downloaded = $true
-            } catch {
-              $retryCount++
-              if ($retryCount -lt $maxRetries) {
-                Write-Host "Download failed, retrying... ($retryCount/$maxRetries)"
-                Start-Sleep -Seconds 5
-              } else {
-                throw "Failed to download NSSM after $maxRetries attempts"
-              }
-            }
-          }
-          
-          Write-Host "Extracting..."
-          Expand-Archive -Path "nssm.zip" -DestinationPath "." -Force
-          
-          Write-Host "Copying nssm.exe (64-bit)..."
+          Write-Host "Copying NSSM from Chocolatey installation..."
           New-Item -ItemType Directory -Force -Path $toolsDir | Out-Null
-          Copy-Item "nssm-$nssmVersion\win64\nssm.exe" "$toolsDir\nssm.exe"
           
-          Write-Host "NSSM downloaded successfully"
-          Get-ChildItem "$toolsDir\nssm.exe" | Format-List
+          # Find NSSM from Chocolatey installation
+          $nssmPath = Get-ChildItem -Path "C:\ProgramData\chocolatey\lib\nssm\tools" -Filter "nssm.exe" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.DirectoryName -like "*win64*" } | Select-Object -First 1
+          
+          if ($nssmPath) {
+            Copy-Item $nssmPath.FullName "$toolsDir\nssm.exe"
+            Write-Host "NSSM copied successfully from: $($nssmPath.FullName)"
+            Get-ChildItem "$toolsDir\nssm.exe" | Format-List
+          } else {
+            throw "NSSM not found in Chocolatey installation"
+          }
         shell: powershell
 
       - name: Build Windows binary
