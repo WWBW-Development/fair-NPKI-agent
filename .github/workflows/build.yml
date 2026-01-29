@@ -74,7 +74,26 @@ jobs:
           $toolsDir = "tools"
           
           Write-Host "Downloading NSSM $nssmVersion from GitHub..."
-          Invoke-WebRequest -Uri $nssmUrl -OutFile "nssm.zip" -MaximumRetryCount 3 -RetryIntervalSec 5
+          
+          # Manual retry logic (PowerShell 5.1 compatible)
+          $maxRetries = 3
+          $retryCount = 0
+          $downloaded = $false
+          
+          while (-not $downloaded -and $retryCount -lt $maxRetries) {
+            try {
+              Invoke-WebRequest -Uri $nssmUrl -OutFile "nssm.zip"
+              $downloaded = $true
+            } catch {
+              $retryCount++
+              if ($retryCount -lt $maxRetries) {
+                Write-Host "Download failed, retrying... ($retryCount/$maxRetries)"
+                Start-Sleep -Seconds 5
+              } else {
+                throw "Failed to download NSSM after $maxRetries attempts"
+              }
+            }
+          }
           
           Write-Host "Extracting..."
           Expand-Archive -Path "nssm.zip" -DestinationPath "." -Force
