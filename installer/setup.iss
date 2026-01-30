@@ -53,10 +53,16 @@ Source: "..\build\npki-agent-win.exe"; DestDir: "{app}"; DestName: "{#MyAppExeNa
 ; NSSM (Service Manager) - Included in repository
 Source: "..\tools\nssm.exe"; DestDir: "{app}"; Flags: ignoreversion
 
+; Manual install/uninstall scripts (for advanced users)
+Source: "..\scripts\install.bat"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\scripts\uninstall.bat"; DestDir: "{app}"; Flags: ignoreversion
+
 [Icons]
 ; No desktop icons for background service
-; Create uninstall shortcut in start menu
+; Create shortcuts in start menu
 Name: "{group}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"
+Name: "{group}\Uninstall (Manual)"; Filename: "{app}\uninstall.bat"; Comment: "Manually uninstall NPKI Agent service"
+Name: "{group}\Reinstall Service"; Filename: "{app}\install.bat"; Comment: "Reinstall NPKI Agent service"
 
 [Run]
 ; Install and start Windows Service using NSSM
