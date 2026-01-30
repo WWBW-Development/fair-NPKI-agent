@@ -13,19 +13,51 @@ export type Certificate = {
 
 // NPKI 폴더 경로 가져오기
 const getNPKIPaths = (): string[] => {
-  const homeDir = os.homedir();
   const platform = os.platform();
-  console.log('homeDir', homeDir);
   console.log('platform', platform);
+
   if (platform === 'darwin') {
-    // macOS
+    // macOS: 현재 사용자만
+    const homeDir = os.homedir();
+    console.log('homeDir', homeDir);
     return [path.join(homeDir, 'Library', 'Preferences', 'NPKI'), path.join(homeDir, 'Documents')];
   } else if (platform === 'win32') {
-    // Windows
-    return [
-      path.join(homeDir, 'AppData', 'LocalLow', 'NPKI'),
-      path.join(homeDir, 'Documents', 'NPKI'),
-    ];
+    // Windows: 모든 사용자 폴더 스캔
+    const usersDir = 'C:\\Users';
+    const paths: string[] = [];
+
+    try {
+      if (fs.existsSync(usersDir)) {
+        const users = fs.readdirSync(usersDir);
+        console.log(`📂 Found ${users.length} user folders in ${usersDir}`);
+
+        for (const user of users) {
+          // 시스템 폴더 제외
+          if (['Public', 'Default', 'Default User', 'All Users'].includes(user)) {
+            continue;
+          }
+
+          const userPaths = [
+            path.join(usersDir, user, 'AppData', 'LocalLow', 'NPKI'),
+            path.join(usersDir, user, 'Documents', 'NPKI'),
+          ];
+
+          paths.push(...userPaths);
+          console.log(`👤 Added paths for user: ${user}`);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to scan users directory:', error);
+      // Fallback: 현재 사용자 경로만 사용
+      const homeDir = os.homedir();
+      console.log('Fallback to current user homeDir:', homeDir);
+      return [
+        path.join(homeDir, 'AppData', 'LocalLow', 'NPKI'),
+        path.join(homeDir, 'Documents', 'NPKI'),
+      ];
+    }
+
+    return paths;
   }
 
   return [];
