@@ -15,7 +15,8 @@ export type Certificate = {
 const getNPKIPaths = (): string[] => {
   const homeDir = os.homedir();
   const platform = os.platform();
-
+  console.log('homeDir', homeDir);
+  console.log('platform', platform);
   if (platform === 'darwin') {
     // macOS
     return [path.join(homeDir, 'Library', 'Preferences', 'NPKI'), path.join(homeDir, 'Documents')];
@@ -87,6 +88,12 @@ const generateCertId = (filePath: string): string => {
 export const findCertificates = async (): Promise<Certificate[]> => {
   const certificates: Certificate[] = [];
   const npkiPaths = getNPKIPaths();
+
+  console.log('=== findCertificates 시작 ===');
+  console.log('현재 시간:', new Date().toISOString());
+
+  console.log('📂 NPKI 경로 목록:', npkiPaths);
+  console.log('📂 경로 개수:', npkiPaths.length);
 
   for (const npkiPath of npkiPaths) {
     const certFiles = findCertificateFiles(npkiPath);
