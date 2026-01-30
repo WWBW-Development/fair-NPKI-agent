@@ -14,16 +14,23 @@ const allowedOrigins = [
   'https://fair.wwbw.ai',
 ];
 
+const checkOrigin = (origin: string | undefined) => {
+  //  동일 출처 허용
+  if (!origin) {
+    return true;
+  }
+
+  //  허용된 출처 확인
+  return allowedOrigins.some((allowed) =>
+    allowed instanceof RegExp ? allowed.test(origin) : allowed === origin
+  );
+};
+
 // CORS 설정
 app.use(
   cors({
     origin: (origin, callback) => {
-      // origin이 없거나 localhost인 경우만 허용
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(null, false);
-      }
+      callback(null, checkOrigin(origin));
     },
     credentials: true,
   })
