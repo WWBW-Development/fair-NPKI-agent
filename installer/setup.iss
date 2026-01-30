@@ -101,16 +101,22 @@ begin
     // Verify service is running
     if Exec('cmd.exe', '/c sc query {#MyServiceName} | find "RUNNING"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0) then
     begin
-      MsgBox('NPKI Agent has been installed and started successfully!' + #13#10 + #13#10 +
-             'Windows Service is now running.' + #13#10 + #13#10 +
-             'Server is available on http://localhost:62735' + #13#10 + #13#10 +
-             'To verify: curl http://localhost:62735/npki/health', 
+      MsgBox('NPKI Agent has been installed and started successfully!' + #13#10 + 
+             'NPKI Agent가 성공적으로 설치되고 시작되었습니다!' + #13#10 + #13#10 +
+             'Windows Service is now running.' + #13#10 +
+             'Windows 서비스가 실행 중입니다.' + #13#10 + #13#10 +
+             'Server is available on http://localhost:62735' + #13#10 +
+             '서버는 http://localhost:62735 에서 사용 가능합니다.' + #13#10 + #13#10 +
+             '⚠️ Please return to your web service and click the refresh button.' + #13#10 +
+             '⚠️ 웹 서비스로 돌아가서 새로고침 버튼을 눌러주세요.', 
              mbInformation, MB_OK);
     end
     else
     begin
       MsgBox('Service installed but may not be running.' + #13#10 +
-             'Please check Services (services.msc)', 
+             '서비스가 설치되었지만 실행되지 않을 수 있습니다.' + #13#10 + #13#10 +
+             'Please check Services (services.msc)' + #13#10 +
+             'Services (services.msc)를 확인해주세요.', 
              mbInformation, MB_OK);
     end;
   end;
