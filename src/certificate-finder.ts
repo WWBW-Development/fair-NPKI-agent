@@ -98,6 +98,9 @@ export const findCertificates = async (): Promise<Certificate[]> => {
   for (const npkiPath of npkiPaths) {
     const certFiles = findCertificateFiles(npkiPath);
 
+    console.log('📂 인증서 파일:', certFiles);
+    console.log('📂 인증서 파일 개수:', certFiles.length);
+
     for (const certFile of certFiles) {
       try {
         const stats = fs.statSync(certFile);
