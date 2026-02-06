@@ -1,9 +1,7 @@
 import express, { Request, Response } from 'express';
 import packageJson from '../package.json';
 import cors from 'cors';
-import FormData from 'form-data';
-import fs from 'fs';
-import { findCertificates } from './certificate-finder';
+import { findCertificates, Certificate } from './certificate-finder';
 
 const app = express();
 const PORT = 62735;
@@ -46,30 +44,9 @@ app.get('/npki/health', (_: Request, res: Response) => {
 app.get('/npki/certificates', async (_: Request, res: Response) => {
   try {
     const certs = await findCertificates();
-    const form = new FormData();
 
-    // 메타데이터
-    const metadata = certs.map((cert, index) => ({
-      index: index,
-      id: cert.id,
-      issuer: cert.issuer,
-      fileName: cert.fileName,
-      size: cert.size,
-      modifiedDate: cert.modifiedDate,
-    }));
-
-    form.append('metadata', JSON.stringify(metadata));
-
-    // 각 파일 추가
-    certs.forEach((cert, index) => {
-      const fileBuffer = fs.readFileSync(cert.path);
-      form.append(`certificate_${index}`, fileBuffer, {
-        filename: cert.fileName,
-      });
-    });
-
-    res.setHeader('Content-Type', `multipart/form-data; boundary=${form.getBoundary()}`);
-    form.pipe(res);
+    // findCertificates가 이미 base64로 인코딩된 Certificate[]를 반환
+    res.json(certs);
   } catch (error) {
     console.error('Error getting certificates:', error);
     res.status(500).json({ error: 'Failed to retrieve certificates' });

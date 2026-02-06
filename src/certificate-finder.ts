@@ -2,13 +2,37 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
+// API 응답 타입 (클라이언트에서 사용)
 export type Certificate = {
-  id: string;
-  issuer: string;
-  fileName: string;
-  path: string;
-  size: number;
-  modifiedDate: string;
+  folderName: string; // 현재 폴더명 (인증서가 있는 폴더)
+  pfxFileBase64?: string; // base64
+  derFileBase64?: string; // base64
+  keyFileBase64?: string; // base64
+};
+
+// 파일을 base64로 인코딩 (클라이언트의 base64ToFile 형식에 맞춤)
+const fileToBase64WithFilename = (filePath: string, fileName: string): string => {
+  const buffer = fs.readFileSync(filePath);
+  const base64Data = buffer.toString('base64');
+
+  // 클라이언트에서 decodeURIComponent(atob(encodedFilename))로 디코딩하므로
+  // 서버에서는 encodeURIComponent -> base64 순서로 인코딩
+  const uriEncodedFilename = encodeURIComponent(fileName);
+  const encodedFilename = Buffer.from(uriEncodedFilename).toString('base64');
+
+  // MIME 타입 결정
+  const ext = fileName.toLowerCase().split('.').pop();
+  let mimeType = 'application/octet-stream';
+  if (ext === 'pfx' || ext === 'p12') {
+    mimeType = 'application/x-pkcs12';
+  } else if (ext === 'der') {
+    mimeType = 'application/x-x509-ca-cert';
+  } else if (ext === 'key') {
+    mimeType = 'application/pkcs8';
+  }
+
+  // data:mime;base64,xxxxx&encodedFilename 형식
+  return `data:${mimeType};base64,${base64Data}&${encodedFilename}`;
 };
 
 // NPKI 폴더 경로 가져오기
@@ -63,9 +87,10 @@ const getNPKIPaths = (): string[] => {
   return [];
 };
 
-// 디렉토리에서 재귀적으로 인증서 파일 찾기
-const findCertificateFiles = (baseDir: string): string[] => {
-  const results: string[] = [];
+// 디렉토리에서 재귀적으로 인증서 찾기 (바로 base64로 인코딩해서 반환)
+const findCertificateFiles = (baseDir: string): Certificate[] => {
+  const results: Certificate[] = [];
+  const processedDerFiles = new Set<string>(); // 이미 처리된 .der 파일 추적
 
   if (!fs.existsSync(baseDir)) {
     return results;
@@ -75,6 +100,12 @@ const findCertificateFiles = (baseDir: string): string[] => {
     try {
       const entries = fs.readdirSync(dir, { withFileTypes: true });
 
+      // 같은 폴더에 있는 .der, .key, .pfx 파일 수집
+      const derFiles: { fileName: string; path: string }[] = [];
+      const keyFiles: { fileName: string; path: string }[] = [];
+      const pfxFiles: { fileName: string; path: string }[] = [];
+
+      // entries를 순회하며 바로 분류
       for (const entry of entries) {
         const fullPath = path.join(dir, entry.name);
 
@@ -83,11 +114,57 @@ const findCertificateFiles = (baseDir: string): string[] => {
           traverse(fullPath);
         } else if (entry.isFile()) {
           const ext = path.extname(entry.name).toLowerCase();
-          if (ext === '.pfx' || ext === '.p12' || ext === '.der' || ext === '.key') {
-            results.push(fullPath);
+
+          if (ext === '.der') {
+            derFiles.push({ fileName: entry.name, path: fullPath });
+          } else if (ext === '.key') {
+            keyFiles.push({ fileName: entry.name, path: fullPath });
+          } else if (ext === '.pfx' || ext === '.p12') {
+            pfxFiles.push({ fileName: entry.name, path: fullPath });
           }
         }
       }
+
+      // .der과 .key를 쌍으로 묶기 (현재 폴더에 둘 다 있으면 쌍으로 간주)
+      if (derFiles.length > 0 && keyFiles.length > 0) {
+        derFiles.forEach((derFile) => {
+          if (processedDerFiles.has(derFile.path)) return;
+
+          // 현재 폴더의 .key 파일과 매칭
+          const matchingKeyFile = keyFiles[0]; // 같은 폴더에 하나만 있을 것으로 가정
+
+          try {
+            const folderName = path.basename(dir);
+
+            results.push({
+              folderName,
+              derFileBase64: fileToBase64WithFilename(derFile.path, derFile.fileName),
+              keyFileBase64: fileToBase64WithFilename(
+                matchingKeyFile.path,
+                matchingKeyFile.fileName
+              ),
+            });
+
+            processedDerFiles.add(derFile.path);
+          } catch (error) {
+            console.error(`Error reading der-key pair ${derFile.path}:`, error);
+          }
+        });
+      }
+
+      // .pfx / .p12 파일 처리
+      pfxFiles.forEach((pfxFile) => {
+        try {
+          const folderName = path.basename(dir);
+
+          results.push({
+            folderName,
+            pfxFileBase64: fileToBase64WithFilename(pfxFile.path, pfxFile.fileName),
+          });
+        } catch (error) {
+          console.error(`Error reading pfx file ${pfxFile.path}:`, error);
+        }
+      });
     } catch (error) {
       // 권한 오류 등은 무시
       console.error(`Error reading directory ${dir}:`, error);
@@ -96,24 +173,6 @@ const findCertificateFiles = (baseDir: string): string[] => {
 
   traverse(baseDir);
   return results;
-};
-
-// 발급기관 추출 (경로에서)
-const extractIssuer = (filePath: string): string => {
-  const parts = filePath.split(path.sep);
-  const npkiIndex = parts.findIndex((p) => p.toUpperCase() === 'NPKI');
-
-  if (npkiIndex >= 0 && npkiIndex + 1 < parts.length) {
-    return parts[npkiIndex + 1];
-  }
-
-  return 'Unknown';
-};
-
-// 인증서 ID 생성 (파일 경로 기반 해시)
-const generateCertId = (filePath: string): string => {
-  // 간단한 ID 생성 (경로 기반)
-  return Buffer.from(filePath).toString('base64').substring(0, 32);
 };
 
 // 모든 인증서 찾기
@@ -128,31 +187,12 @@ export const findCertificates = async (): Promise<Certificate[]> => {
   console.log('📂 경로 개수:', npkiPaths.length);
 
   for (const npkiPath of npkiPaths) {
-    const certFiles = findCertificateFiles(npkiPath);
-
-    console.log('📂 인증서 파일:', certFiles);
-    console.log('📂 인증서 파일 개수:', certFiles.length);
-
-    for (const certFile of certFiles) {
-      try {
-        const stats = fs.statSync(certFile);
-        const fileName = path.basename(certFile);
-        const issuer = extractIssuer(certFile);
-        const id = generateCertId(certFile);
-
-        certificates.push({
-          id,
-          issuer,
-          fileName,
-          path: certFile,
-          size: stats.size,
-          modifiedDate: stats.mtime.toISOString(),
-        });
-      } catch (error) {
-        console.error(`Error reading certificate file ${certFile}:`, error);
-      }
-    }
+    // findCertificateFiles가 이미 쌍으로 묶어서 Certificate[] 반환
+    const certs = findCertificateFiles(npkiPath);
+    console.log(`📂 ${npkiPath}에서 발견된 인증서 쌍:`, certs.length);
+    certificates.push(...certs);
   }
 
+  console.log('📋 총 인증서 쌍 개수:', certificates.length);
   return certificates;
 };
