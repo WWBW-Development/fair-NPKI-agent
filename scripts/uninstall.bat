@@ -7,10 +7,13 @@ echo Uninstalling NPKI Agent...
 REM Check for administrator privileges
 net session >nul 2>&1
 if %errorlevel% neq 0 (
-    echo ERROR: This script requires administrator privileges.
-    echo Please run as Administrator.
-    pause
-    exit /b 1
+    echo Administrator privileges required.
+    echo Requesting elevation...
+    echo.
+    
+    REM Request administrator privileges and restart script
+    powershell -Command "Start-Process '%~f0' -Verb RunAs"
+    exit /b
 )
 
 REM Set variables
